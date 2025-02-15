@@ -28,48 +28,39 @@
     <script>
         const planilhaURL = 'https://docs.google.com/spreadsheets/d/15J3iJ-320B71-TrGNaP-X5LQT8tDVP0F3utKEzx4ATA/gviz/tq?tqx=out:csv&sheet=Sheet1';
 
-const frases = {
-    introducao: [
-        "Hum, deixe-me ver...",
-        "Sobre isso...",
-        "Interessante questão!",
-        "Posso te dizer que...",
-        "Deixe-me pensar um pouco...",
-        "Ah, sim, sobre isso..."
-    ],
-    conclusao: [
-        "Espero ter ajudado!",
-        "Essa é a informação que tenho.",
-        "É tudo que sei.",
-        "Espero que isso ajude em sua jornada!",
-        "Se precisar de mais algo, me diga."
-    ],
-    desconhecido: [
-        "Não tenho essa informação no momento.",
-        "Não sei responder a essa pergunta.",
-        "Essa informação me escapa."
-    ]
-};
+        const frases = {
+            introducao: [
+                "Hum, deixe-me ver...",
+                "Sobre isso...",
+                "Interessante questão!",
+                "Posso te dizer que...",
+                "Deixe-me pensar um pouco...",
+                "Ah, sim, sobre isso..."
+            ],
+            conclusao: [
+                "Espero ter ajudado!",
+                "Essa é a informação que tenho.",
+                "É tudo que sei.",
+                "Espero que isso ajude em sua jornada!",
+                "Se precisar de mais algo, me diga."
+            ],
+            desconhecido: [
+                "Não tenho essa informação no momento.",
+                "Não sei responder a essa pergunta.",
+                "Essa informação me escapa."
+            ]
+        };
 
-function enviarPergunta() {
-    const pergunta = document.getElementById('pergunta').value.toLowerCase();
-    const respostaArea = document.getElementById('resposta');
-    respostaArea.textContent = 'Carregando...';
-
-    fetch(planilhaURL)
-        .then(response => response.text())
-        .then(data => {
-            const linhas = data.split('\n');
+        function parseCSV(csv) {
+            const linhas = csv.split('\n');
             const bancoDeDados = [];
 
-            // Verifica se há linhas e se a primeira linha contém os nomes das colunas
             if (linhas.length > 1) {
                 const nomesColunas = linhas[0].split(',');
                 const colunaEntidade = nomesColunas.indexOf('Entidade');
                 const colunaAtributo = nomesColunas.indexOf('Atributo');
                 const colunaValor = nomesColunas.indexOf('Valor');
 
-                // Verifica se as colunas necessárias existem
                 if (colunaEntidade > -1 && colunaAtributo > -1 && colunaValor > -1) {
                     for (let i = 1; i < linhas.length; i++) {
                         const colunas = linhas[i].split(',');
@@ -82,59 +73,64 @@ function enviarPergunta() {
                         }
                     }
                 } else {
-                    respostaArea.textContent = "Erro: As colunas 'Entidade', 'Atributo' e 'Valor' não foram encontradas na planilha.";
-                    return; // Impede a execução do restante do código se as colunas não forem encontradas
+                    console.error("Erro: As colunas 'Entidade', 'Atributo' e 'Valor' não foram encontradas na planilha.");
+                    return null; // Retorna null para indicar erro
                 }
             } else {
-                respostaArea.textContent = "Erro: A planilha está vazia ou o formato está incorreto.";
-                return; // Impede a execução do restante do código se não houver dados
+                console.error("Erro: A planilha está vazia ou o formato está incorreto.");
+                return null; // Retorna null para indicar erro
             }
 
+            return bancoDeDados;
+        }
+
+        function construirResposta(pergunta, bancoDeDados) {
+            const perguntaFormatada = pergunta.toLowerCase();
             let resposta = frases.desconhecido[Math.floor(Math.random() * frases.desconhecido.length)];
-            const palavrasChave = pergunta.split(' ');
-            let entidadeEncontrada = null;
-            let atributoEncontrado = null;
 
-            // Busca por entidades e atributos que correspondam a pergunta
             for (const item of bancoDeDados) {
-                 if (palavrasChave.some(palavra => item.entidade.includes(palavra) || item.atributo.includes(palavra))) {
-                    entidadeEncontrada = item.entidade;
-                    atributoEncontrado = item.atributo;
-                    break;
-                }
-            }
+                if (perguntaFormatada.includes(item.entidade) || perguntaFormatada.includes(item.atributo)) {
+                    const valor = item.valores[Math.floor(Math.random() * item.valores.length)];
+                    let frase = '';
 
-
-            if (entidadeEncontrada && atributoEncontrado) {
-                // Tenta responder com base nas palavras-chave
-                for (const item of bancoDeDados) {
-                    if (item.entidade === entidadeEncontrada && item.atributo === atributoEncontrado) {
-                        const valor = item.valores[Math.floor(Math.random() * item.valores.length)];
-                        let frase = '';
-
-                        if (pergunta.includes(item.entidade) && pergunta.includes(item.atributo)) {
-                            frase = `${item.entidade} tem ${item.atributo} que é ${valor}.`;
-                        } else if (pergunta.includes(item.entidade)) {
-                            frase = `${item.entidade} ${item.atributo} é ${valor}.`;
-                        } else if (pergunta.includes(item.atributo)) {
-                            frase = `O ${item.atributo} de ${item.entidade} é ${valor}.`; // Mais natural
-                        }
-
-                        const introducao = frases.introducao[Math.floor(Math.random() * frases.introducao.length)];
-                        const conclusao = frases.conclusao[Math.floor(Math.random() * frases.conclusao.length)];
-                        resposta = `${introducao} ${frase} ${conclusao}`;
-                        break; // Encontrou, então para
+                    if (perguntaFormatada.includes(item.entidade) && perguntaFormatada.includes(item.atributo)) {
+                        frase = `${item.entidade} tem ${item.atributo} que é ${valor}.`;
+                    } else if (perguntaFormatada.includes(item.entidade)) {
+                        frase = `${item.entidade} ${item.atributo} é ${valor}.`;
+                    } else if (perguntaFormatada.includes(item.atributo)) {
+                        frase = `O ${item.atributo} de ${item.entidade} é ${valor}.`;
                     }
+
+                    const introducao = frases.introducao[Math.floor(Math.random() * frases.introducao.length)];
+                    const conclusao = frases.conclusao[Math.floor(Math.random() * frases.conclusao.length)];
+                    resposta = `${introducao} ${frase} ${conclusao}`;
+                    break; // Encontrou, então para
                 }
             }
+            return resposta;
+        }
 
-            respostaArea.textContent = resposta;
-        })
-        .catch(error => {
-            respostaArea.textContent = 'Erro ao obter resposta.';
-            console.error('Erro:', error);
-        });
-}
+        function enviarPergunta() {
+            const pergunta = document.getElementById('pergunta').value;
+            const respostaArea = document.getElementById('resposta');
+            respostaArea.textContent = 'Carregando...';
+
+            fetch(planilhaURL)
+                .then(response => response.text())
+                .then(data => {
+                    const bancoDeDados = parseCSV(data);
+                    if (bancoDeDados) {
+                        const resposta = construirResposta(pergunta, bancoDeDados);
+                        respostaArea.textContent = resposta;
+                    } else {
+                        respostaArea.textContent = "Erro ao processar a planilha.";
+                    }
+                })
+                .catch(error => {
+                    respostaArea.textContent = 'Erro ao obter resposta.';
+                    console.error('Erro:', error);
+                });
+        }
     </script>
 </body>
 </html>
