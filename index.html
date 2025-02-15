@@ -3,14 +3,7 @@
 <head>
     <title>IA do Evento RPG (Generativa Aprimorada)</title>
     <style>
-        body { font-family: sans-serif; }
-        #chat { width: 600px; margin: 20px auto; border: 1px solid #ccc; padding: 10px; }
-        #input-area { margin-bottom: 10px; }
-        #resposta-area { padding: 10px; border-top: 1px solid #ccc; }
-        #resposta { word-wrap: break-word; }
-        input[type="text"] { width: 80%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-        button { padding: 8px 15px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #3e8e41; }
+        /* ... (seu CSS) ... */
     </style>
 </head>
 <body>
@@ -26,69 +19,67 @@
     </div>
 
     <script>
-        const planilhaURL = 'https://docs.google.com/spreadsheets/d/15J3iJ-320B71-TrGNaP-X5LQT8tDVP0F3utKEzx4ATA/gviz/tq?tqx=out:csv&sheet=Sheet1';
+        const planilhaURL = 'https://docs.google.com/spreadsheets/d/15J3iJ-320B71-TrGNaP-X5LQT8tDVP0F3utKEzx4ATA/gviz/tq?tqx=out:csv&sheet=Sheet1'; // <<<-- COLOCAR AQUI A URL DA PLANILHA
 
         const frases = {
-            introducao: [
-                "Hum, deixe-me ver...",
-                "Sobre isso...",
-                "Interessante questão!",
-                "Posso te dizer que...",
-                "Deixe-me pensar um pouco...",
-                "Ah, sim, sobre isso..."
-            ],
-            conclusao: [
-                "Espero ter ajudado!",
-                "Essa é a informação que tenho.",
-                "É tudo que sei.",
-                "Espero que isso ajude em sua jornada!",
-                "Se precisar de mais algo, me diga."
-            ],
-            desconhecido: [
-                "Não tenho essa informação no momento.",
-                "Não sei responder a essa pergunta.",
-                "Essa informação me escapa."
-            ]
+            // ... (suas frases) ...
         };
 
         function parseCSV(csv) {
+            console.log("parseCSV: Iniciando a análise CSV");
+            if (!csv) {
+                console.error("parseCSV: Dados CSV ausentes ou inválidos.");
+                return null;
+            }
+
             const linhas = csv.split('\n');
+            console.log(`parseCSV: ${linhas.length} linhas encontradas`);
             const bancoDeDados = [];
 
             if (linhas.length > 1) {
                 const nomesColunas = linhas[0].split(',');
+                console.log(`parseCSV: Nomes das colunas: ${nomesColunas}`);
                 const colunaEntidade = nomesColunas.indexOf('Entidade');
                 const colunaAtributo = nomesColunas.indexOf('Atributo');
                 const colunaValor = nomesColunas.indexOf('Valor');
 
-                if (colunaEntidade > -1 && colunaAtributo > -1 && colunaValor > -1) {
-                    for (let i = 1; i < linhas.length; i++) {
-                        const colunas = linhas[i].split(',');
-                        if (colunas.length >= 3) {
-                            bancoDeDados.push({
-                                entidade: colunas[colunaEntidade].toLowerCase().trim(),
-                                atributo: colunas[colunaAtributo].toLowerCase().trim(),
-                                valores: colunas[colunaValor].trim().split(';').map(v => v.trim()),
-                            });
-                        }
+                if (colunaEntidade === -1 || colunaAtributo === -1 || colunaValor === -1) {
+                    console.error("parseCSV: Uma ou mais colunas principais não foram encontradas.");
+                    return null;
+                }
+
+                for (let i = 1; i < linhas.length; i++) {
+                    const colunas = linhas[i].split(',');
+                    console.log(`parseCSV: Linha ${i + 1}: ${colunas}`);
+                    if (colunas.length >= 3) {
+                        bancoDeDados.push({
+                            entidade: colunas[colunaEntidade].toLowerCase().trim(),
+                            atributo: colunas[colunaAtributo].toLowerCase().trim(),
+                            valores: colunas[colunaValor].trim().split(';').map(v => v.trim()),
+                        });
+                    } else {
+                        console.warn(`parseCSV: Linha ${i + 1} tem menos de 3 colunas. Ignorando.`);
                     }
-                } else {
-                    console.error("Erro: As colunas 'Entidade', 'Atributo' e 'Valor' não foram encontradas na planilha.");
-                    return null; // Retorna null para indicar erro
                 }
             } else {
-                console.error("Erro: A planilha está vazia ou o formato está incorreto.");
-                return null; // Retorna null para indicar erro
+                console.warn("parseCSV: Planilha aparentemente vazia (menos de 2 linhas).");
             }
-
+            console.log("parseCSV: Análise CSV concluída, banco de dados:", bancoDeDados);
             return bancoDeDados;
         }
 
         function construirResposta(pergunta, bancoDeDados) {
+            console.log("construirResposta: Iniciando a construção da resposta.");
             const perguntaFormatada = pergunta.toLowerCase();
             let resposta = frases.desconhecido[Math.floor(Math.random() * frases.desconhecido.length)];
 
+            if (!bancoDeDados || bancoDeDados.length === 0) {
+                console.warn("construirResposta: Banco de dados vazio ou inválido.");
+                return resposta;
+            }
+
             for (const item of bancoDeDados) {
+                console.log("construirResposta: Verificando item:", item);
                 if (perguntaFormatada.includes(item.entidade) || perguntaFormatada.includes(item.atributo)) {
                     const valor = item.valores[Math.floor(Math.random() * item.valores.length)];
                     let frase = '';
@@ -104,9 +95,11 @@
                     const introducao = frases.introducao[Math.floor(Math.random() * frases.introducao.length)];
                     const conclusao = frases.conclusao[Math.floor(Math.random() * frases.conclusao.length)];
                     resposta = `${introducao} ${frase} ${conclusao}`;
-                    break; // Encontrou, então para
+                    console.log("construirResposta: Resposta encontrada:", resposta);
+                    break;
                 }
             }
+            console.log("construirResposta: Resposta final:", resposta);
             return resposta;
         }
 
@@ -114,21 +107,31 @@
             const pergunta = document.getElementById('pergunta').value;
             const respostaArea = document.getElementById('resposta');
             respostaArea.textContent = 'Carregando...';
+            console.log("enviarPergunta: Iniciando a requisição da planilha.");
 
             fetch(planilhaURL)
-                .then(response => response.text())
+                .then(response => {
+                    console.log("enviarPergunta: Resposta recebida da planilha:", response);
+                    if (!response.ok) {
+                        throw new Error(`Erro na requisição: ${response.status}`);
+                    }
+                    return response.text();
+                })
                 .then(data => {
+                    console.log("enviarPergunta: Dados da planilha recebidos:", data);
                     const bancoDeDados = parseCSV(data);
                     if (bancoDeDados) {
+                        console.log("enviarPergunta: Banco de dados criado com sucesso.");
                         const resposta = construirResposta(pergunta, bancoDeDados);
                         respostaArea.textContent = resposta;
                     } else {
                         respostaArea.textContent = "Erro ao processar a planilha.";
+                        console.error("enviarPergunta: Erro ao processar a planilha (parseCSV retornou null).");
                     }
                 })
                 .catch(error => {
                     respostaArea.textContent = 'Erro ao obter resposta.';
-                    console.error('Erro:', error);
+                    console.error('enviarPergunta: Erro:', error); // Mostra o erro específico
                 });
         }
     </script>
